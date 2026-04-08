@@ -5,6 +5,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 
+type SpeechRecognitionCtor = new () => {
+  lang: string;
+  interimResults: boolean;
+  maxAlternatives: number;
+  onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+};
+
 export default function Home() {
   const [query, setQuery] = useState("");
   const [songs, setSongs] = useState<Song[]>([]);
@@ -12,6 +22,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
+  const [listening, setListening] = useState(false);
 
   useEffect(() => {
     const term = query.trim();
@@ -44,7 +55,9 @@ export default function Home() {
     setLoading(true);
 
     try {
-      const response = await fetch(`/api/songs/search?q=${encodeURIComponent(query)}`);
+      const response = await fetch(
+        `/api/songs/search?q=${encodeURIComponent(query)}`,
+      );
       const data = (await response.json()) as { songs?: Song[]; error?: string };
       if (!response.ok) {
         throw new Error(data.error || "Search failed.");
@@ -57,6 +70,45 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function startVoiceInput() {
+    if (typeof window === "undefined") return;
+    const Ctor = (
+      window as Window & {
+        SpeechRecognition?: SpeechRecognitionCtor;
+        webkitSpeechRecognition?: SpeechRecognitionCtor;
+      }
+    ).SpeechRecognition ||
+      (
+        window as Window & {
+          webkitSpeechRecognition?: SpeechRecognitionCtor;
+        }
+      ).webkitSpeechRecognition;
+
+    if (!Ctor) {
+      setError("Voice input is not supported in this browser.");
+      return;
+    }
+
+    setError(null);
+    const recognition = new Ctor();
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onresult = (event) => {
+      const transcript = event.results?.[0]?.[0]?.transcript?.trim();
+      if (transcript) {
+        setQuery(transcript);
+        setIsAutocompleteOpen(false);
+      }
+    };
+    recognition.onerror = () => {
+      setError("Could not capture voice input.");
+    };
+    recognition.onend = () => setListening(false);
+    setListening(true);
+    recognition.start();
   }
 
   return (
@@ -114,6 +166,14 @@ export default function Home() {
             </div>
           ) : null}
         </div>
+        <button
+          type="button"
+          onClick={startVoiceInput}
+          className="neu-btn px-4 py-2.5 font-medium"
+          title="Voice to text input"
+        >
+          {listening ? "Listening..." : "Voice"}
+        </button>
         <button
           type="submit"
           disabled={!query.trim() || loading}

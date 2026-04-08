@@ -5,10 +5,17 @@ Simple iTunes-based recommendation app:
 - Open details (song, artist, album art, preview link)
 - View similar songs (artist-based)
 - Share song pages using copy/share button
+- Optional lyrics-mode lookup using Genius + iTunes mapping
 
 ## Setup
 
-No API keys or paid accounts required.
+No API keys required for standard mode.
+
+For lyrics mode, add in `.env.local`:
+
+```env
+GENIUS_ACCESS_TOKEN=your_genius_api_token
+```
 
 ```bash
 npm install
