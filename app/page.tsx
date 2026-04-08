@@ -3,13 +3,40 @@
 import { Song } from "@/lib/types";
 import Image from "next/image";
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 export default function Home() {
   const [query, setQuery] = useState("");
   const [songs, setSongs] = useState<Song[]>([]);
+  const [suggestions, setSuggestions] = useState<Song[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
+
+  useEffect(() => {
+    const term = query.trim();
+    if (term.length < 2) {
+      setSuggestions([]);
+      setIsAutocompleteOpen(false);
+      return;
+    }
+
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await fetch(
+          `/api/songs/search?q=${encodeURIComponent(term)}&limit=6`,
+        );
+        const data = (await response.json()) as { songs?: Song[] };
+        if (!response.ok) return;
+        setSuggestions(data.songs ?? []);
+        setIsAutocompleteOpen(true);
+      } catch {
+        setSuggestions([]);
+      }
+    }, 220);
+
+    return () => window.clearTimeout(timer);
+  }, [query]);
 
   async function onSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -23,6 +50,7 @@ export default function Home() {
         throw new Error(data.error || "Search failed.");
       }
       setSongs(data.songs ?? []);
+      setIsAutocompleteOpen(false);
     } catch (err) {
       setSongs([]);
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -59,12 +87,33 @@ export default function Home() {
       </section>
 
       <form onSubmit={onSearch} className="mx-auto mt-8 flex w-full max-w-3xl gap-3">
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Try: Blinding Lights"
-          className="neu-inset w-full px-4 py-3 text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] focus:ring-2 focus:ring-[#d09a6e]"
-        />
+        <div className="relative w-full">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => setIsAutocompleteOpen(suggestions.length > 0)}
+            placeholder="Try: Blinding Lights"
+            className="neu-inset w-full px-4 py-3 text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] focus:ring-2 focus:ring-[#d09a6e]"
+          />
+          {isAutocompleteOpen && suggestions.length > 0 ? (
+            <div className="neu-panel absolute z-20 mt-2 w-full p-2">
+              {suggestions.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    setQuery(item.name);
+                    setIsAutocompleteOpen(false);
+                  }}
+                  className="w-full rounded-lg px-3 py-2 text-left hover:bg-[#f1dfc8]"
+                >
+                  <p className="text-sm font-semibold text-[var(--foreground)]">{item.name}</p>
+                  <p className="text-xs text-[var(--muted)]">{item.artist}</p>
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
         <button
           type="submit"
           disabled={!query.trim() || loading}
