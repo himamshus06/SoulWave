@@ -81,25 +81,51 @@ export function SongDetails({ songId }: { songId: string }) {
     let cancelled = false;
     const attemptDelayMs = 700;
     const fallbackDelayMs = attempts.length * attemptDelayMs + 700;
+    const timeoutIds: number[] = [];
+
+    const cancelFlow = () => {
+      if (cancelled) return;
+      cancelled = true;
+      for (const id of timeoutIds) window.clearTimeout(id);
+      window.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pagehide", cancelFlow);
+      window.removeEventListener("blur", cancelFlow);
+      setMusicAppMessage(null);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        cancelFlow();
+      }
+    };
+
+    window.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pagehide", cancelFlow);
+    window.addEventListener("blur", cancelFlow);
 
     attempts.forEach((attempt, index) => {
-      window.setTimeout(() => {
+      const id = window.setTimeout(() => {
         if (cancelled) return;
         setMusicAppMessage(`Trying ${attempt.app}...`);
         window.location.href = attempt.uri;
       }, index * attemptDelayMs);
+      timeoutIds.push(id);
     });
 
-    window.setTimeout(() => {
+    const fallbackId = window.setTimeout(() => {
       if (cancelled) return;
       setMusicAppMessage("Opening web results...");
+      window.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pagehide", cancelFlow);
+      window.removeEventListener("blur", cancelFlow);
       window.location.href = webFallback;
     }, fallbackDelayMs);
+    timeoutIds.push(fallbackId);
 
-    window.setTimeout(() => {
-      cancelled = true;
-      setMusicAppMessage(null);
+    const resetId = window.setTimeout(() => {
+      cancelFlow();
     }, fallbackDelayMs + 1600);
+    timeoutIds.push(resetId);
   }
 
   if (loading) return <p className="text-[var(--muted)]">Loading song details...</p>;
