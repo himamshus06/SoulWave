@@ -32,36 +32,56 @@ export default function Home() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 py-10">
-      <h1 className="text-3xl font-bold tracking-tight">Media Suggestions</h1>
-      <p className="mt-2 text-sm text-zinc-600">
-        Search songs with iTunes and discover similar tracks.
-      </p>
+    <main className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col overflow-hidden px-6 py-10">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-16 -left-10 h-52 w-52 rounded-[28%] bg-gradient-to-br from-[#f8c88a] via-[#e89a65] to-[#d06d4f] opacity-45 blur-[2px]"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute top-20 right-[-4.5rem] h-56 w-56 rotate-12 rounded-[24%] bg-gradient-to-br from-[#f6ddb6] via-[#efb476] to-[#c97745] opacity-50"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute bottom-8 left-[24%] h-40 w-40 rotate-45 rounded-[20%] bg-gradient-to-br from-[#efc18f] via-[#e08f57] to-[#bb6741] opacity-35"
+      />
 
-      <form onSubmit={onSearch} className="mt-8 flex gap-3">
+      <section className="relative z-10 mx-auto mt-4 flex min-h-[34vh] w-full max-w-3xl flex-col items-center justify-center text-center">
+        <h1 className="text-5xl font-black tracking-tight text-[var(--foreground)] sm:text-6xl">
+          SoulWave
+        </h1>
+        <p className="mt-3 text-sm font-medium uppercase tracking-[0.18em] text-[var(--muted)]">
+          warm sonic discovery
+        </p>
+        <p className="mt-3 max-w-xl text-sm text-[var(--muted)]">
+          Search songs with iTunes and discover similar tracks in a clean, shareable flow.
+        </p>
+      </section>
+
+      <form onSubmit={onSearch} className="mx-auto mt-8 flex w-full max-w-3xl gap-3">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Try: Blinding Lights"
-          className="w-full rounded-md border border-zinc-300 bg-white px-4 py-2.5 outline-none ring-indigo-500 focus:ring-2"
+          className="neu-inset w-full px-4 py-3 text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] focus:ring-2 focus:ring-[#d09a6e]"
         />
         <button
           type="submit"
           disabled={!query.trim() || loading}
-          className="rounded-md bg-indigo-600 px-5 py-2.5 font-medium text-white disabled:cursor-not-allowed disabled:bg-indigo-300"
+          className="neu-btn warm-btn px-5 py-2.5 font-medium disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? "Searching..." : "Search"}
         </button>
       </form>
 
-      {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="mt-4 text-sm text-[#a33f2f]">{error}</p> : null}
 
-      <section className="mt-8 grid gap-4 sm:grid-cols-2">
+      <section className="mx-auto mt-8 grid w-full max-w-4xl gap-4 sm:grid-cols-2">
         {songs.map((song) => (
           <Link
             key={song.id}
             href={`/song/${song.id}`}
-            className="rounded-lg border border-zinc-200 bg-white p-4 transition hover:border-indigo-300"
+            className="neu-panel p-4 transition hover:translate-y-[-1px]"
           >
             <div className="flex items-center gap-4">
               {song.albumArt ? (
@@ -70,15 +90,15 @@ export default function Home() {
                   alt={song.album}
                   width={72}
                   height={72}
-                  className="rounded-md object-cover"
+                  className="rounded-xl object-cover"
                 />
               ) : (
-                <div className="h-[72px] w-[72px] rounded-md bg-zinc-200" />
+                <div className="neu-inset h-[72px] w-[72px] rounded-xl" />
               )}
               <div>
-                <h2 className="font-semibold">{song.name}</h2>
-                <p className="text-sm text-zinc-600">{song.artist}</p>
-                <p className="text-xs text-zinc-500">{song.album}</p>
+                <h2 className="font-semibold text-[var(--foreground)]">{song.name}</h2>
+                <p className="text-sm text-[var(--muted)]">{song.artist}</p>
+                <p className="text-xs text-[var(--muted)]">{song.album}</p>
               </div>
             </div>
           </Link>

@@ -82,17 +82,17 @@ export function SongDetails({ songId }: { songId: string }) {
     }, 1200);
   }
 
-  if (loading) return <p className="text-zinc-600">Loading song details...</p>;
-  if (error) return <p className="text-red-600">{error}</p>;
-  if (!song) return <p className="text-zinc-600">Song not found.</p>;
+  if (loading) return <p className="text-[var(--muted)]">Loading song details...</p>;
+  if (error) return <p className="text-[#a33f2f]">{error}</p>;
+  if (!song) return <p className="text-[var(--muted)]">Song not found.</p>;
 
   return (
     <div className="space-y-8">
-      <Link href="/" className="text-sm text-indigo-700 hover:underline">
+      <Link href="/" className="text-sm text-[#9f5c34] hover:underline">
         Back to search
       </Link>
 
-      <section className="rounded-lg border border-zinc-200 bg-white p-6">
+      <section className="neu-panel p-6">
         <div className="flex flex-col gap-5 sm:flex-row">
           {song.albumArt ? (
             <Image
@@ -100,27 +100,27 @@ export function SongDetails({ songId }: { songId: string }) {
               alt={song.album}
               width={220}
               height={220}
-              className="rounded-lg object-cover"
+              className="rounded-2xl object-cover"
             />
           ) : (
-            <div className="h-[220px] w-[220px] rounded-lg bg-zinc-200" />
+            <div className="neu-inset h-[220px] w-[220px] rounded-2xl" />
           )}
 
           <div className="space-y-3">
-            <h1 className="text-2xl font-semibold">{song.name}</h1>
-            <p className="text-zinc-700">{song.artist}</p>
-            <p className="text-sm text-zinc-500">Album: {song.album}</p>
+            <h1 className="text-2xl font-semibold text-[var(--foreground)]">{song.name}</h1>
+            <p className="text-[var(--foreground)]">{song.artist}</p>
+            <p className="text-sm text-[var(--muted)]">Album: {song.album}</p>
 
             <div className="flex flex-wrap gap-3 pt-2">
               <button
                 onClick={shareSong}
-                className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white"
+                className="neu-btn warm-btn px-4 py-2 text-sm font-medium"
               >
                 Share this song
               </button>
               <button
                 onClick={openInDefaultMusicAppSearch}
-                className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium"
+                className="neu-btn px-4 py-2 text-sm font-medium"
               >
                 Search in Music app
               </button>
@@ -130,7 +130,7 @@ export function SongDetails({ songId }: { songId: string }) {
                   href={song.previewUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium"
+                  className="neu-btn px-4 py-2 text-sm font-medium"
                 >
                   Listen preview
                 </a>
@@ -141,28 +141,28 @@ export function SongDetails({ songId }: { songId: string }) {
                   href={song.externalUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium"
+                  className="neu-btn px-4 py-2 text-sm font-medium"
                 >
                   Open in iTunes
                 </a>
               ) : null}
             </div>
-            {shareMessage ? <p className="text-sm text-indigo-700">{shareMessage}</p> : null}
+            {shareMessage ? <p className="text-sm text-[#9f5c34]">{shareMessage}</p> : null}
           </div>
         </div>
       </section>
 
       <section>
-        <h2 className="mb-3 text-xl font-semibold">Similar songs</h2>
+        <h2 className="mb-3 text-xl font-semibold text-[var(--foreground)]">Similar songs</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           {similarSongs.map((similarSong) => (
             <Link
               key={similarSong.id}
               href={`/song/${similarSong.id}`}
-              className="rounded-lg border border-zinc-200 bg-white p-3"
+              className="neu-panel p-3"
             >
-              <p className="font-medium">{similarSong.name}</p>
-              <p className="text-sm text-zinc-600">{similarSong.artist}</p>
+              <p className="font-medium text-[var(--foreground)]">{similarSong.name}</p>
+              <p className="text-sm text-[var(--muted)]">{similarSong.artist}</p>
             </Link>
           ))}
         </div>

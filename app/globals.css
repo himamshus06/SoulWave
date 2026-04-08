@@ -1,8 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f4ede2;
+  --foreground: #1f1a16;
+  --surface: #f2e8da;
+  --surface-warm: #f1dfc8;
+  --warm-accent: #c97745;
+  --warm-accent-dark: #9f5c34;
+  --muted: #6f655d;
+  --shadow-light: #fffaf2;
+  --shadow-dark: #d5c6b1;
 }
 
 @theme inline {
@@ -12,15 +19,53 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+.neu-panel {
+  background: var(--surface);
+  border-radius: 1rem;
+  box-shadow:
+    8px 8px 16px var(--shadow-dark),
+    -8px -8px 16px var(--shadow-light);
+}
+
+.neu-inset {
+  background: var(--surface);
+  border-radius: 0.85rem;
+  box-shadow:
+    inset 6px 6px 12px var(--shadow-dark),
+    inset -6px -6px 12px var(--shadow-light);
+}
+
+.neu-btn {
+  border-radius: 0.8rem;
+  background: var(--surface-warm);
+  color: var(--foreground);
+  box-shadow:
+    6px 6px 12px var(--shadow-dark),
+    -6px -6px 12px var(--shadow-light);
+  transition: all 0.2s ease;
+}
+
+.neu-btn:hover {
+  background: #eed8be;
+}
+
+.neu-btn:active {
+  box-shadow:
+    inset 4px 4px 8px var(--shadow-dark),
+    inset -4px -4px 8px var(--shadow-light);
+}
+
+.warm-btn {
+  background: var(--warm-accent);
+  color: #fff8ef;
+}
+
+.warm-btn:hover {
+  background: var(--warm-accent-dark);
 }

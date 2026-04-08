@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Media Suggestions",
-  description: "Simple iTunes-based song recommendations",
+  title: "SoulWave",
+  description: "SoulWave - warm, simple music discovery",
 };
 
 export default function RootLayout({
