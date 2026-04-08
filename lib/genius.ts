@@ -1,4 +1,5 @@
 import { iTunesSearchSongs } from "@/lib/itunes";
+import { rankSongsByTheme } from "@/lib/theme";
 import { Song } from "@/lib/types";
 
 type GeniusHit = {
@@ -75,5 +76,6 @@ export async function lyricsSearchViaGenius(lyrics: string, limit = 12) {
 
   const deduped = new Map<string, Song>();
   for (const song of pooled) deduped.set(song.id, song);
-  return [...deduped.values()].slice(0, limit);
+  const themed = rankSongsByTheme([...deduped.values()], lyrics);
+  return themed.slice(0, limit);
 }

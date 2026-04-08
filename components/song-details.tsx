@@ -9,6 +9,7 @@ export function SongDetails({ songId }: { songId: string }) {
   const [song, setSong] = useState<Song | null>(null);
   const [similarSongs, setSimilarSongs] = useState<Song[]>([]);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
+  const [musicAppMessage, setMusicAppMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,19 +68,38 @@ export function SongDetails({ songId }: { songId: string }) {
     if (!song || typeof window === "undefined") return;
     const searchTerm = `${song.name} ${song.artist}`.trim();
     const encoded = encodeURIComponent(searchTerm);
-    const appUri = `music://music.apple.com/search?term=${encoded}`;
-    const webUrl = `https://music.apple.com/us/search?term=${encoded}`;
+    const attempts = [
+      { app: "Spotify", uri: `spotify:search:${searchTerm}` },
+      { app: "Apple Music", uri: `music://music.apple.com/search?term=${encoded}` },
+      { app: "YouTube Music", uri: `youtubemusic://search?query=${encoded}` },
+    ];
+    const webFallback = `https://www.google.com/search?q=${encodeURIComponent(
+      `${searchTerm} spotify OR "apple music" OR "youtube music"`,
+    )}`;
 
-    // Try app deep link first; if unavailable, use web search.
-    const fallbackTimer = window.setTimeout(() => {
-      window.location.href = webUrl;
-    }, 900);
+    setMusicAppMessage("Trying installed music apps...");
+    let cancelled = false;
+    const attemptDelayMs = 700;
+    const fallbackDelayMs = attempts.length * attemptDelayMs + 700;
 
-    window.location.href = appUri;
+    attempts.forEach((attempt, index) => {
+      window.setTimeout(() => {
+        if (cancelled) return;
+        setMusicAppMessage(`Trying ${attempt.app}...`);
+        window.location.href = attempt.uri;
+      }, index * attemptDelayMs);
+    });
 
     window.setTimeout(() => {
-      window.clearTimeout(fallbackTimer);
-    }, 1200);
+      if (cancelled) return;
+      setMusicAppMessage("Opening web results...");
+      window.location.href = webFallback;
+    }, fallbackDelayMs);
+
+    window.setTimeout(() => {
+      cancelled = true;
+      setMusicAppMessage(null);
+    }, fallbackDelayMs + 1600);
   }
 
   if (loading) return <p className="text-[var(--muted)]">Loading song details...</p>;
@@ -122,18 +142,17 @@ export function SongDetails({ songId }: { songId: string }) {
                 onClick={openInDefaultMusicAppSearch}
                 className="neu-btn px-4 py-2 text-sm font-medium"
               >
-                Search in Music app
+                Open in music app
               </button>
 
               {song.previewUrl ? (
-                <a
-                  href={song.previewUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="neu-btn px-4 py-2 text-sm font-medium"
-                >
-                  Listen preview
-                </a>
+                <div className="neu-panel w-full p-3 sm:max-w-md">
+                  <p className="mb-2 text-sm font-medium text-[var(--foreground)]">Listen preview</p>
+                  <audio controls preload="none" className="w-full">
+                    <source src={song.previewUrl} type="audio/mpeg" />
+                    Your browser does not support audio playback.
+                  </audio>
+                </div>
               ) : null}
 
               {song.externalUrl ? (
@@ -148,6 +167,7 @@ export function SongDetails({ songId }: { songId: string }) {
               ) : null}
             </div>
             {shareMessage ? <p className="text-sm text-[#9f5c34]">{shareMessage}</p> : null}
+            {musicAppMessage ? <p className="text-sm text-[#9f5c34]">{musicAppMessage}</p> : null}
           </div>
         </div>
       </section>

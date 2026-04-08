@@ -14,4 +14,4 @@ export type Playlist = {
   songs: Song[];
 };
 
-export type MusicProvider = "itunes";
+export type MusicProvider = "itunes" | "lastfm" | "lastfm+itunes";
