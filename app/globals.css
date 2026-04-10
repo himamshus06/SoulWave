@@ -25,6 +25,12 @@ body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
+html,
+body {
+  width: 100%;
+  overflow-x: hidden;
+}
+
 .neu-panel {
   background: var(--surface);
   border-radius: 1rem;

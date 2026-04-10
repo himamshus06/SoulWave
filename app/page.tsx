@@ -249,138 +249,136 @@ export default function Home() {
   }
 
   return (
-    <main className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col overflow-x-hidden px-4 py-10 sm:px-6">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-16 -left-10 h-52 w-52 rounded-[28%] bg-gradient-to-br from-[#f8c88a] via-[#e89a65] to-[#d06d4f] opacity-45 blur-[2px]"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute top-20 right-[-4.5rem] h-56 w-56 rotate-12 rounded-[24%] bg-gradient-to-br from-[#f6ddb6] via-[#efb476] to-[#c97745] opacity-50"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute bottom-8 left-[24%] h-40 w-40 rotate-45 rounded-[20%] bg-gradient-to-br from-[#efc18f] via-[#e08f57] to-[#bb6741] opacity-35"
-      />
+    <main className="relative w-full">
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <div className="absolute -top-20 -left-20 h-64 w-64 rounded-[28%] bg-gradient-to-br from-[#f8c88a] via-[#e89a65] to-[#d06d4f] opacity-45 blur-[2px]" />
+        <div className="absolute top-24 right-0 h-72 w-72 translate-x-24 rotate-12 rounded-[24%] bg-gradient-to-br from-[#f6ddb6] via-[#efb476] to-[#c97745] opacity-45" />
+        <div className="absolute bottom-10 left-[18%] h-52 w-52 rotate-45 rounded-[20%] bg-gradient-to-br from-[#efc18f] via-[#e08f57] to-[#bb6741] opacity-30" />
+      </div>
 
-      <section className="relative z-10 mx-auto mt-4 flex min-h-[34vh] w-full max-w-3xl flex-col items-center justify-center text-center">
-        <h1 className="text-5xl font-black tracking-tight text-[var(--foreground)] sm:text-6xl">
-          SoulWave
-        </h1>
-        <p className="mt-3 text-sm font-medium uppercase tracking-[0.18em] text-[var(--muted)]">
-          warm sonic discovery
-        </p>
-        <p className="mt-3 max-w-xl text-sm text-[var(--muted)]">
-          Search songs with iTunes and discover similar tracks in a clean, shareable flow.
-        </p>
-      </section>
+      <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
+        <header className="mx-auto mt-2 max-w-3xl text-center">
+          <h1 className="text-5xl font-black tracking-tight text-[var(--foreground)] sm:text-6xl">
+            SoulWave
+          </h1>
+          <p className="mt-3 text-sm font-medium uppercase tracking-[0.18em] text-[var(--muted)]">
+            warm sonic discovery
+          </p>
+          <p className="mt-3 text-sm text-[var(--muted)]">
+            Search songs with iTunes and discover similar tracks in a clean, shareable flow.
+          </p>
+        </header>
 
-      <form onSubmit={onSearch} className="mx-auto mt-8 flex w-full max-w-3xl gap-3">
-        <div className="relative w-full">
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={searchMode === "lyrics" ? "Try lyrics: 'I said ooh'" : "Try: Blinding Lights"}
-            className="neu-inset w-full px-4 py-3 text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] focus:ring-2 focus:ring-[#d09a6e]"
-          />
-          <div className="mt-3 flex w-full flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setSearchMode("song")}
-              className={`neu-btn px-3 py-2 text-sm font-medium ${searchMode === "song" ? "warm-btn" : ""}`}
-            >
-              Song
-            </button>
-            <button
-              type="button"
-              onClick={() => setSearchMode("lyrics")}
-              className={`neu-btn px-3 py-2 text-sm font-medium ${searchMode === "lyrics" ? "warm-btn" : ""}`}
-            >
-              Lyrics
-            </button>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={startVoiceInput}
-          className="neu-btn px-4 py-2.5 font-medium"
-          title="Voice to text input"
-        >
-          {listening ? "Listening..." : "Voice"}
-        </button>
-        <button
-          type="submit"
-          disabled={!query.trim() || loading}
-          className="neu-btn warm-btn px-5 py-2.5 font-medium disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {loading ? "Searching..." : "Search"}
-        </button>
-      </form>
+        <section className="mx-auto mt-8 w-full">
+          <form onSubmit={onSearch} className="neu-panel w-full p-4 sm:p-5">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={searchMode === "lyrics" ? "Search by lyrics (example: i said ooh)" : "Search songs (example: Blinding Lights)"}
+                className="neu-inset w-full px-4 py-3 text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] focus:ring-2 focus:ring-[#d09a6e]"
+              />
 
-      {error ? <p className="mt-4 text-sm text-[#a33f2f]">{error}</p> : null}
-      {actionMessage ? <p className="mt-2 text-sm text-[#9f5c34]">{actionMessage}</p> : null}
-
-      <section className="mx-auto mt-8 grid w-full max-w-4xl min-w-0 gap-4 sm:grid-cols-2">
-        {songs.map((song) => (
-          <div
-            key={song.id}
-            className="neu-panel w-full min-w-0 max-w-full p-4 transition hover:translate-y-[-1px]"
-          >
-            <div className="flex items-center gap-4">
-              {song.albumArt ? (
-                <Image
-                  src={song.albumArt}
-                  alt={song.album}
-                  width={72}
-                  height={72}
-                  className="rounded-xl object-cover"
-                />
-              ) : (
-                <div className="neu-inset h-[72px] w-[72px] rounded-xl" />
-              )}
-              <div className="min-w-0">
-                <h2 className="truncate font-semibold text-[var(--foreground)]">{song.name}</h2>
-                <p className="truncate text-sm text-[var(--muted)]">{song.artist}</p>
-                <p className="truncate text-xs text-[var(--muted)]">{song.album}</p>
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setSearchMode("song")}
+                  className={`neu-btn w-full px-3 py-2 text-sm font-semibold sm:w-auto ${searchMode === "song" ? "warm-btn" : ""}`}
+                >
+                  Song
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSearchMode("lyrics")}
+                  className={`neu-btn w-full px-3 py-2 text-sm font-semibold sm:w-auto ${searchMode === "lyrics" ? "warm-btn" : ""}`}
+                >
+                  Lyrics
+                </button>
               </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-2 max-[500px]:grid-cols-1 sm:flex sm:flex-wrap">
-              {song.previewUrl ? (
-                <button
-                  type="button"
-                  onClick={() => togglePreview(song)}
-                  className="neu-btn w-full px-3 py-2 text-sm font-medium sm:w-auto"
-                >
-                  {previewSongId === song.id ? "Pause preview" : "Preview"}
-                </button>
-              ) : null}
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[auto_1fr]">
               <button
                 type="button"
-                onClick={() => openInDefaultMusicAppSearch(song)}
-                className="neu-btn w-full px-3 py-2 text-sm font-medium sm:w-auto"
+                onClick={startVoiceInput}
+                className="neu-btn w-full px-4 py-2.5 font-medium sm:w-auto"
+                title="Voice to text input"
               >
-                Open with app
+                {listening ? "Listening..." : "Voice"}
               </button>
               <button
-                type="button"
-                onClick={() => loadSimilarSongs(song)}
-                disabled={similarLoadingId === song.id}
-                className="neu-btn warm-btn w-full px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+                type="submit"
+                disabled={!query.trim() || loading}
+                className="neu-btn warm-btn w-full px-5 py-2.5 font-semibold disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {similarLoadingId === song.id ? "Loading..." : "Similar songs"}
-              </button>
-              <button
-                type="button"
-                onClick={() => shareSong(song)}
-                className="neu-btn w-full px-3 py-2 text-sm font-medium sm:w-auto"
-              >
-                Share
+                {loading ? "Searching..." : "Search"}
               </button>
             </div>
-          </div>
-        ))}
-      </section>
+          </form>
+
+          {error ? <p className="mt-4 text-sm text-[#a33f2f]">{error}</p> : null}
+          {actionMessage ? <p className="mt-2 text-sm text-[#9f5c34]">{actionMessage}</p> : null}
+        </section>
+
+        <section className="mt-8 grid w-full min-w-0 gap-4 sm:grid-cols-2">
+          {songs.map((song) => (
+            <div key={song.id} className="neu-panel w-full min-w-0 max-w-full p-4 transition hover:translate-y-[-1px]">
+              <div className="flex items-center gap-4">
+                {song.albumArt ? (
+                  <Image
+                    src={song.albumArt}
+                    alt={song.album}
+                    width={72}
+                    height={72}
+                    className="rounded-xl object-cover"
+                  />
+                ) : (
+                  <div className="neu-inset h-[72px] w-[72px] rounded-xl" />
+                )}
+                <div className="min-w-0">
+                  <h2 className="truncate font-semibold text-[var(--foreground)]">{song.name}</h2>
+                  <p className="truncate text-sm text-[var(--muted)]">{song.artist}</p>
+                  <p className="truncate text-xs text-[var(--muted)]">{song.album}</p>
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-2 max-[500px]:grid-cols-1">
+                {song.previewUrl ? (
+                  <button
+                    type="button"
+                    onClick={() => togglePreview(song)}
+                    className="neu-btn w-full px-3 py-2 text-sm font-medium"
+                  >
+                    {previewSongId === song.id ? "Pause preview" : "Preview"}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => openInDefaultMusicAppSearch(song)}
+                  className="neu-btn w-full px-3 py-2 text-sm font-medium"
+                >
+                  Open with app
+                </button>
+                <button
+                  type="button"
+                  onClick={() => loadSimilarSongs(song)}
+                  disabled={similarLoadingId === song.id}
+                  className="neu-btn warm-btn w-full px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {similarLoadingId === song.id ? "Loading..." : "Similar songs"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => shareSong(song)}
+                  className="neu-btn w-full px-3 py-2 text-sm font-medium"
+                >
+                  Share
+                </button>
+              </div>
+            </div>
+          ))}
+        </section>
+      </div>
     </main>
   );
 }
