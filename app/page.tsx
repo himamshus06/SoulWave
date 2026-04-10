@@ -248,7 +248,7 @@ export default function Home() {
   }
 
   return (
-    <main className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col overflow-hidden px-6 py-10">
+    <main className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col overflow-hidden px-4 py-10 sm:px-6">
       <div
         aria-hidden
         className="pointer-events-none absolute -top-16 -left-10 h-52 w-52 rounded-[28%] bg-gradient-to-br from-[#f8c88a] via-[#e89a65] to-[#d06d4f] opacity-45 blur-[2px]"
@@ -325,12 +325,12 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-4 grid grid-cols-2 gap-2 max-[500px]:grid-cols-1 sm:flex sm:flex-wrap">
               {song.previewUrl ? (
                 <button
                   type="button"
                   onClick={() => togglePreview(song)}
-                  className="neu-btn px-3 py-2 text-sm font-medium"
+                  className="neu-btn w-full px-3 py-2 text-sm font-medium sm:w-auto"
                 >
                   {previewSongId === song.id ? "Pause preview" : "Preview"}
                 </button>
@@ -338,7 +338,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => openInDefaultMusicAppSearch(song)}
-                className="neu-btn px-3 py-2 text-sm font-medium"
+                className="neu-btn w-full px-3 py-2 text-sm font-medium sm:w-auto"
               >
                 Open with app
               </button>
@@ -346,14 +346,14 @@ export default function Home() {
                 type="button"
                 onClick={() => loadSimilarSongs(song)}
                 disabled={similarLoadingId === song.id}
-                className="neu-btn warm-btn px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-70"
+                className="neu-btn warm-btn w-full px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
               >
                 {similarLoadingId === song.id ? "Loading..." : "Similar songs"}
               </button>
               <button
                 type="button"
                 onClick={() => shareSong(song)}
-                className="neu-btn px-3 py-2 text-sm font-medium"
+                className="neu-btn w-full px-3 py-2 text-sm font-medium sm:w-auto"
               >
                 Share
               </button>
