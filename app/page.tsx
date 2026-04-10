@@ -20,6 +20,7 @@ export default function Home() {
   const [songs, setSongs] = useState<Song[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [similarLoadingId, setSimilarLoadingId] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [previewSongId, setPreviewSongId] = useState<string | null>(null);
@@ -188,6 +189,26 @@ export default function Home() {
     }
   }
 
+  async function loadSimilarSongs(seedSong: Song) {
+    setError(null);
+    setActionMessage(null);
+    setSimilarLoadingId(seedSong.id);
+    setPreviewSongId(null);
+
+    try {
+      const response = await fetch(`/api/songs/${encodeURIComponent(seedSong.id)}/similar`);
+      const data = (await response.json()) as { songs?: Song[]; error?: string };
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to load similar songs.");
+      }
+      setSongs(data.songs ?? []);
+    } catch (err) {
+      setActionMessage(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setSimilarLoadingId(null);
+    }
+  }
+
   function startVoiceInput() {
     if (typeof window === "undefined") return;
     const Ctor = (
@@ -321,12 +342,14 @@ export default function Home() {
               >
                 Open with app
               </button>
-              <Link
-                href={`/song/${song.id}`}
-                className="neu-btn warm-btn px-3 py-2 text-sm font-medium"
+              <button
+                type="button"
+                onClick={() => loadSimilarSongs(song)}
+                disabled={similarLoadingId === song.id}
+                className="neu-btn warm-btn px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-70"
               >
-                Similar songs
-              </Link>
+                {similarLoadingId === song.id ? "Loading..." : "Similar songs"}
+              </button>
               <button
                 type="button"
                 onClick={() => shareSong(song)}
