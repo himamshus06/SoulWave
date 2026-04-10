@@ -69,9 +69,11 @@ export function SongDetails({ songId }: { songId: string }) {
     const searchTerm = `${song.name} ${song.artist}`.trim();
     const encoded = encodeURIComponent(searchTerm);
     const attempts = [
-      { app: "Spotify", uri: `spotify:search:${searchTerm}` },
-      { app: "Apple Music", uri: `music://music.apple.com/search?term=${encoded}` },
-      { app: "YouTube Music", uri: `youtubemusic://search?query=${encoded}` },
+      // Use universal links so Safari treats URLs as valid and
+      // can hand off to installed apps when supported.
+      { app: "Spotify", uri: `https://open.spotify.com/search/${encoded}` },
+      { app: "Apple Music", uri: `https://music.apple.com/search?term=${encoded}` },
+      { app: "YouTube Music", uri: `https://music.youtube.com/search?q=${encoded}` },
     ];
     const webFallback = `https://www.google.com/search?q=${encodeURIComponent(
       `${searchTerm} spotify OR "apple music" OR "youtube music"`,
