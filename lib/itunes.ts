@@ -67,6 +67,17 @@ async function rawITunesSearch(term: string, limit: number) {
   return (await response.json()) as ITunesSearchResponse;
 }
 
+async function rawITunesSearchWithAttribute(term: string, attribute: string, limit: number) {
+  const response = await fetch(
+    `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&entity=song&attribute=${encodeURIComponent(
+      attribute,
+    )}&limit=${limit}`,
+    { next: { revalidate: 60 } },
+  );
+  if (!response.ok) throw new Error(`iTunes search failed (${response.status}).`);
+  return (await response.json()) as ITunesSearchResponse;
+}
+
 function mapITunesTrack(track: ITunesTrack): Song {
   return {
     id: `itunes:${track.trackId}`,
@@ -95,6 +106,31 @@ export async function iTunesSearchSongs(query: string, limit = 12) {
 
   return [...deduped.values()]
     .sort((a, b) => fuzzyScore(b, query) - fuzzyScore(a, query))
+    .slice(0, limit)
+    .map(mapITunesTrack);
+}
+
+export async function iTunesSearchSongsByArtist(artistQuery: string, limit = 12) {
+  const expandedLimit = Math.max(limit * 4, 24);
+  const [primary, tokenFallback] = await Promise.all([
+    rawITunesSearchWithAttribute(artistQuery, "artistTerm", expandedLimit),
+    artistQuery.includes(" ")
+      ? rawITunesSearchWithAttribute(
+          artistQuery.split(/\s+/).filter(Boolean).join(" "),
+          "artistTerm",
+          expandedLimit,
+        )
+      : Promise.resolve({ results: [] as ITunesTrack[] }),
+  ]);
+
+  const deduped = new Map<number, ITunesTrack>();
+  for (const track of [...primary.results, ...tokenFallback.results]) {
+    deduped.set(track.trackId, track);
+  }
+
+  const q = normalize(artistQuery);
+  return [...deduped.values()]
+    .sort((a, b) => diceSimilarity(q, normalize(b.artistName)) - diceSimilarity(q, normalize(a.artistName)))
     .slice(0, limit)
     .map(mapITunesTrack);
 }

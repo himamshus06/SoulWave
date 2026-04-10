@@ -24,7 +24,7 @@ export default function Home() {
   const [listening, setListening] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [previewSongId, setPreviewSongId] = useState<string | null>(null);
-  const [searchMode, setSearchMode] = useState<"song" | "lyrics">("song");
+  const [searchMode, setSearchMode] = useState<"song" | "lyrics" | "artist">("song");
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -275,11 +275,17 @@ export default function Home() {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder={searchMode === "lyrics" ? "Search by lyrics (example: i said ooh)" : "Search songs (example: Blinding Lights)"}
+                placeholder={
+                  searchMode === "lyrics"
+                    ? "Search by lyrics (example: i said ooh)"
+                    : searchMode === "artist"
+                      ? "Search by artist (example: The Weeknd)"
+                      : "Search songs (example: Blinding Lights)"
+                }
                 className="neu-inset w-full px-4 py-3 text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] focus:ring-2 focus:ring-[#d09a6e]"
               />
 
-              <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
+              <div className="grid grid-cols-3 gap-2 sm:flex sm:justify-end">
                 <button
                   type="button"
                   onClick={() => setSearchMode("song")}
@@ -293,6 +299,13 @@ export default function Home() {
                   className={`neu-btn w-full px-3 py-2 text-sm font-semibold sm:w-auto ${searchMode === "lyrics" ? "warm-btn" : ""}`}
                 >
                   Lyrics
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSearchMode("artist")}
+                  className={`neu-btn w-full px-3 py-2 text-sm font-semibold sm:w-auto ${searchMode === "artist" ? "warm-btn" : ""}`}
+                >
+                  Artist
                 </button>
               </div>
             </div>

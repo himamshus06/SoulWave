@@ -1,5 +1,5 @@
 import { lyricsSearchViaGenius } from "@/lib/genius";
-import { iTunesSearchSongs } from "@/lib/itunes";
+import { iTunesSearchSongs, iTunesSearchSongsByArtist } from "@/lib/itunes";
 import { Song } from "@/lib/types";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -39,6 +39,13 @@ export async function GET(request: NextRequest) {
         iTunesSearchSongs(query, safeLimit),
       ]);
       songs = mergeSongs(lyricsSongs, normalSongs, safeLimit);
+    } else if (mode === "artist") {
+      // Bias results toward matching artist names (still returns songs).
+      const [artistSongs, normalSongs] = await Promise.all([
+        iTunesSearchSongsByArtist(query, safeLimit),
+        iTunesSearchSongs(query, safeLimit).catch(() => []),
+      ]);
+      songs = mergeSongs(artistSongs, normalSongs, safeLimit);
     } else if (mode === "song") {
       const [normalSongs, lyricsSongs] = await Promise.all([
         iTunesSearchSongs(query, safeLimit),
