@@ -112,15 +112,60 @@ export async function iTunesLookupSong(songId: string) {
 }
 
 export async function iTunesSimilarSongs(seedSong: Song, limit = 10) {
-  const response = await fetch(
-    `https://itunes.apple.com/search?term=${encodeURIComponent(seedSong.artist)}&entity=song&limit=30`,
-    { next: { revalidate: 60 } },
-  );
-  if (!response.ok) throw new Error(`iTunes recommendations failed (${response.status}).`);
+  const [byArtist, byTitle] = await Promise.all([
+    fetch(
+      `https://itunes.apple.com/search?term=${encodeURIComponent(seedSong.artist)}&entity=song&limit=35`,
+      { next: { revalidate: 60 } },
+    ),
+    fetch(
+      `https://itunes.apple.com/search?term=${encodeURIComponent(seedSong.name)}&entity=song&limit=35`,
+      { next: { revalidate: 60 } },
+    ),
+  ]);
 
-  const data = (await response.json()) as ITunesSearchResponse;
-  return data.results
+  if (!byArtist.ok && !byTitle.ok) {
+    throw new Error(
+      `iTunes recommendations failed (${byArtist.status || byTitle.status}).`,
+    );
+  }
+
+  const artistData = byArtist.ok
+    ? ((await byArtist.json()) as ITunesSearchResponse)
+    : ({ results: [] } as ITunesSearchResponse);
+  const titleData = byTitle.ok
+    ? ((await byTitle.json()) as ITunesSearchResponse)
+    : ({ results: [] } as ITunesSearchResponse);
+
+  const candidates = [...artistData.results, ...titleData.results]
     .map(mapITunesTrack)
-    .filter((song) => song.id !== seedSong.id)
-    .slice(0, limit);
+    .filter((song) => song.id !== seedSong.id);
+
+  // When Last.fm is unavailable (common in prod misconfig), avoid returning only same-artist tracks.
+  const perArtistCap = 2;
+  const perArtistCounts = new Map<string, number>();
+  const unique = new Map<string, Song>();
+  const diversified: Song[] = [];
+
+  for (const song of candidates) {
+    if (unique.has(song.id)) continue;
+    unique.set(song.id, song);
+
+    const key = song.artist.toLowerCase().trim();
+    const count = perArtistCounts.get(key) ?? 0;
+    if (count >= perArtistCap) continue;
+    perArtistCounts.set(key, count + 1);
+    diversified.push(song);
+    if (diversified.length >= limit) break;
+  }
+
+  if (diversified.length >= limit) return diversified.slice(0, limit);
+
+  // Fill remaining slots without the per-artist cap, still de-duped.
+  for (const song of candidates) {
+    if (diversified.length >= limit) break;
+    if (diversified.some((s) => s.id === song.id)) continue;
+    diversified.push(song);
+  }
+
+  return diversified.slice(0, limit);
 }
