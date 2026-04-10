@@ -3,7 +3,7 @@
 import { Song } from "@/lib/types";
 import Image from "next/image";
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 
 type SpeechRecognitionCtor = new () => {
   lang: string;
@@ -22,6 +22,18 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [previewSongId, setPreviewSongId] = useState<string | null>(null);
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (previewAudioRef.current) {
+        previewAudioRef.current.pause();
+        previewAudioRef.current.src = "";
+        previewAudioRef.current = null;
+      }
+    };
+  }, []);
 
   async function shareSong(song: Song) {
     if (typeof window === "undefined") return;
@@ -107,6 +119,51 @@ export default function Home() {
     timeoutIds.push(resetId);
   }
 
+  async function togglePreview(song: Song) {
+    if (!song.previewUrl) return;
+
+    setActionMessage(null);
+
+    const existing = previewAudioRef.current;
+    if (existing && previewSongId === song.id) {
+      existing.pause();
+      setPreviewSongId(null);
+      return;
+    }
+
+    if (existing) {
+      existing.pause();
+      existing.src = "";
+      previewAudioRef.current = null;
+    }
+
+    const audio = new Audio(song.previewUrl);
+    audio.preload = "none";
+    previewAudioRef.current = audio;
+    setPreviewSongId(song.id);
+
+    audio.onended = () => {
+      if (previewAudioRef.current === audio) {
+        setPreviewSongId(null);
+      }
+    };
+    audio.onerror = () => {
+      if (previewAudioRef.current === audio) {
+        setPreviewSongId(null);
+        setActionMessage("Preview unavailable.");
+      }
+    };
+
+    try {
+      await audio.play();
+    } catch {
+      if (previewAudioRef.current === audio) {
+        setPreviewSongId(null);
+      }
+      setActionMessage("Tap Preview to play (browser blocked autoplay).");
+    }
+  }
+
   async function onSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
@@ -122,6 +179,7 @@ export default function Home() {
         throw new Error(data.error || "Search failed.");
       }
       setSongs(data.songs ?? []);
+      setPreviewSongId(null);
     } catch (err) {
       setSongs([]);
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -248,14 +306,13 @@ export default function Home() {
 
             <div className="mt-4 flex flex-wrap gap-2">
               {song.previewUrl ? (
-                <a
-                  href={song.previewUrl}
-                  target="_blank"
-                  rel="noreferrer"
+                <button
+                  type="button"
+                  onClick={() => togglePreview(song)}
                   className="neu-btn px-3 py-2 text-sm font-medium"
                 >
-                  Preview
-                </a>
+                  {previewSongId === song.id ? "Pause preview" : "Preview"}
+                </button>
               ) : null}
               <button
                 type="button"
