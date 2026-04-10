@@ -3,7 +3,7 @@
 import { Song } from "@/lib/types";
 import Image from "next/image";
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 
 type SpeechRecognitionCtor = new () => {
   lang: string;
@@ -18,40 +18,99 @@ type SpeechRecognitionCtor = new () => {
 export default function Home() {
   const [query, setQuery] = useState("");
   const [songs, setSongs] = useState<Song[]>([]);
-  const [suggestions, setSuggestions] = useState<Song[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
   const [listening, setListening] = useState(false);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    const term = query.trim();
-    if (term.length < 2) {
-      setSuggestions([]);
-      setIsAutocompleteOpen(false);
-      return;
-    }
-
-    const timer = window.setTimeout(async () => {
-      try {
-        const response = await fetch(
-          `/api/songs/search?q=${encodeURIComponent(term)}&limit=6`,
-        );
-        const data = (await response.json()) as { songs?: Song[] };
-        if (!response.ok) return;
-        setSuggestions(data.songs ?? []);
-        setIsAutocompleteOpen(true);
-      } catch {
-        setSuggestions([]);
+  async function shareSong(song: Song) {
+    if (typeof window === "undefined") return;
+    const shareUrl = `${window.location.origin}/song/${song.id}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `${song.name} - ${song.artist}`,
+          text: "Check out this song recommendation",
+          url: shareUrl,
+        });
+        setActionMessage("Shared.");
+        return;
       }
-    }, 220);
+      await navigator.clipboard.writeText(shareUrl);
+      setActionMessage("Link copied to clipboard.");
+    } catch {
+      setActionMessage("Could not share this song.");
+    }
+  }
 
-    return () => window.clearTimeout(timer);
-  }, [query]);
+  function openInDefaultMusicAppSearch(song: Song) {
+    if (typeof window === "undefined") return;
+    const searchTerm = `${song.name} ${song.artist}`.trim();
+    const encoded = encodeURIComponent(searchTerm);
+    const attempts = [
+      { app: "Spotify", uri: `spotify:search:${searchTerm}` },
+      { app: "Apple Music", uri: `music://music.apple.com/search?term=${encoded}` },
+      { app: "YouTube Music", uri: `youtubemusic://search?query=${encoded}` },
+    ];
+    const webFallback = `https://www.google.com/search?q=${encodeURIComponent(
+      `${searchTerm} spotify OR "apple music" OR "youtube music"`,
+    )}`;
+
+    setActionMessage("Trying installed music apps...");
+    let cancelled = false;
+    const attemptDelayMs = 700;
+    const fallbackDelayMs = attempts.length * attemptDelayMs + 700;
+    const timeoutIds: number[] = [];
+
+    const cancelFlow = () => {
+      if (cancelled) return;
+      cancelled = true;
+      for (const id of timeoutIds) window.clearTimeout(id);
+      window.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pagehide", cancelFlow);
+      window.removeEventListener("blur", cancelFlow);
+      setActionMessage(null);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        cancelFlow();
+      }
+    };
+
+    window.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pagehide", cancelFlow);
+    window.addEventListener("blur", cancelFlow);
+
+    attempts.forEach((attempt, index) => {
+      const id = window.setTimeout(() => {
+        if (cancelled) return;
+        setActionMessage(`Trying ${attempt.app}...`);
+        window.location.href = attempt.uri;
+      }, index * attemptDelayMs);
+      timeoutIds.push(id);
+    });
+
+    const fallbackId = window.setTimeout(() => {
+      if (cancelled) return;
+      setActionMessage("Opening web results...");
+      window.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pagehide", cancelFlow);
+      window.removeEventListener("blur", cancelFlow);
+      window.location.href = webFallback;
+    }, fallbackDelayMs);
+    timeoutIds.push(fallbackId);
+
+    const resetId = window.setTimeout(() => {
+      cancelFlow();
+    }, fallbackDelayMs + 1600);
+    timeoutIds.push(resetId);
+  }
 
   async function onSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setActionMessage(null);
     setLoading(true);
 
     try {
@@ -63,7 +122,6 @@ export default function Home() {
         throw new Error(data.error || "Search failed.");
       }
       setSongs(data.songs ?? []);
-      setIsAutocompleteOpen(false);
     } catch (err) {
       setSongs([]);
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -100,7 +158,6 @@ export default function Home() {
       const transcript = event.results?.[0]?.[0]?.transcript?.trim();
       if (transcript) {
         setQuery(transcript);
-        setIsAutocompleteOpen(false);
       }
     };
     recognition.onerror = () => {
@@ -143,28 +200,9 @@ export default function Home() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onFocus={() => setIsAutocompleteOpen(suggestions.length > 0)}
             placeholder="Try: Blinding Lights"
             className="neu-inset w-full px-4 py-3 text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] focus:ring-2 focus:ring-[#d09a6e]"
           />
-          {isAutocompleteOpen && suggestions.length > 0 ? (
-            <div className="neu-panel absolute z-20 mt-2 w-full p-2">
-              {suggestions.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => {
-                    setQuery(item.name);
-                    setIsAutocompleteOpen(false);
-                  }}
-                  className="w-full rounded-lg px-3 py-2 text-left hover:bg-[#f1dfc8]"
-                >
-                  <p className="text-sm font-semibold text-[var(--foreground)]">{item.name}</p>
-                  <p className="text-xs text-[var(--muted)]">{item.artist}</p>
-                </button>
-              ))}
-            </div>
-          ) : null}
         </div>
         <button
           type="button"
@@ -184,14 +222,11 @@ export default function Home() {
       </form>
 
       {error ? <p className="mt-4 text-sm text-[#a33f2f]">{error}</p> : null}
+      {actionMessage ? <p className="mt-2 text-sm text-[#9f5c34]">{actionMessage}</p> : null}
 
       <section className="mx-auto mt-8 grid w-full max-w-4xl gap-4 sm:grid-cols-2">
         {songs.map((song) => (
-          <Link
-            key={song.id}
-            href={`/song/${song.id}`}
-            className="neu-panel p-4 transition hover:translate-y-[-1px]"
-          >
+          <div key={song.id} className="neu-panel p-4 transition hover:translate-y-[-1px]">
             <div className="flex items-center gap-4">
               {song.albumArt ? (
                 <Image
@@ -204,13 +239,46 @@ export default function Home() {
               ) : (
                 <div className="neu-inset h-[72px] w-[72px] rounded-xl" />
               )}
-              <div>
-                <h2 className="font-semibold text-[var(--foreground)]">{song.name}</h2>
-                <p className="text-sm text-[var(--muted)]">{song.artist}</p>
-                <p className="text-xs text-[var(--muted)]">{song.album}</p>
+              <div className="min-w-0">
+                <h2 className="truncate font-semibold text-[var(--foreground)]">{song.name}</h2>
+                <p className="truncate text-sm text-[var(--muted)]">{song.artist}</p>
+                <p className="truncate text-xs text-[var(--muted)]">{song.album}</p>
               </div>
             </div>
-          </Link>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              {song.previewUrl ? (
+                <a
+                  href={song.previewUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="neu-btn px-3 py-2 text-sm font-medium"
+                >
+                  Preview
+                </a>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => openInDefaultMusicAppSearch(song)}
+                className="neu-btn px-3 py-2 text-sm font-medium"
+              >
+                Open with app
+              </button>
+              <Link
+                href={`/song/${song.id}`}
+                className="neu-btn warm-btn px-3 py-2 text-sm font-medium"
+              >
+                Similar songs
+              </Link>
+              <button
+                type="button"
+                onClick={() => shareSong(song)}
+                className="neu-btn px-3 py-2 text-sm font-medium"
+              >
+                Share
+              </button>
+            </div>
+          </div>
         ))}
       </section>
     </main>
