@@ -24,6 +24,7 @@ export default function Home() {
   const [listening, setListening] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [previewSongId, setPreviewSongId] = useState<string | null>(null);
+  const [searchMode, setSearchMode] = useState<"song" | "lyrics">("song");
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -173,7 +174,7 @@ export default function Home() {
 
     try {
       const response = await fetch(
-        `/api/songs/search?q=${encodeURIComponent(query)}`,
+        `/api/songs/search?q=${encodeURIComponent(query)}&mode=${encodeURIComponent(searchMode)}`,
       );
       const data = (await response.json()) as { songs?: Song[]; error?: string };
       if (!response.ok) {
@@ -279,9 +280,25 @@ export default function Home() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Try: Blinding Lights"
+            placeholder={searchMode === "lyrics" ? "Try lyrics: 'I said ooh'" : "Try: Blinding Lights"}
             className="neu-inset w-full px-4 py-3 text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] focus:ring-2 focus:ring-[#d09a6e]"
           />
+          <div className="mt-3 flex w-full flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setSearchMode("song")}
+              className={`neu-btn px-3 py-2 text-sm font-medium ${searchMode === "song" ? "warm-btn" : ""}`}
+            >
+              Song
+            </button>
+            <button
+              type="button"
+              onClick={() => setSearchMode("lyrics")}
+              className={`neu-btn px-3 py-2 text-sm font-medium ${searchMode === "lyrics" ? "warm-btn" : ""}`}
+            >
+              Lyrics
+            </button>
+          </div>
         </div>
         <button
           type="button"

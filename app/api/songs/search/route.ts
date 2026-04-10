@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     let songs;
     if (mode === "lyrics") {
       const [lyricsSongs, normalSongs] = await Promise.all([
-        lyricsSearchViaGenius(query, safeLimit),
+        lyricsSearchViaGenius(query, safeLimit).catch(() => []),
         iTunesSearchSongs(query, safeLimit),
       ]);
       songs = mergeSongs(lyricsSongs, normalSongs, safeLimit);
