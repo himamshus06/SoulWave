@@ -248,7 +248,7 @@ export default function Home() {
   }
 
   return (
-    <main className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col overflow-hidden px-4 py-10 sm:px-6">
+    <main className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col overflow-x-hidden px-4 py-10 sm:px-6">
       <div
         aria-hidden
         className="pointer-events-none absolute -top-16 -left-10 h-52 w-52 rounded-[28%] bg-gradient-to-br from-[#f8c88a] via-[#e89a65] to-[#d06d4f] opacity-45 blur-[2px]"
@@ -303,9 +303,12 @@ export default function Home() {
       {error ? <p className="mt-4 text-sm text-[#a33f2f]">{error}</p> : null}
       {actionMessage ? <p className="mt-2 text-sm text-[#9f5c34]">{actionMessage}</p> : null}
 
-      <section className="mx-auto mt-8 grid w-full max-w-4xl gap-4 sm:grid-cols-2">
+      <section className="mx-auto mt-8 grid w-full max-w-4xl min-w-0 gap-4 sm:grid-cols-2">
         {songs.map((song) => (
-          <div key={song.id} className="neu-panel p-4 transition hover:translate-y-[-1px]">
+          <div
+            key={song.id}
+            className="neu-panel w-full min-w-0 max-w-full p-4 transition hover:translate-y-[-1px]"
+          >
             <div className="flex items-center gap-4">
               {song.albumArt ? (
                 <Image
