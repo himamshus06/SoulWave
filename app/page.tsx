@@ -1,5 +1,6 @@
 "use client";
 
+import { useInfiniteSimilar } from "@/hooks/use-infinite-similar";
 import { Song } from "@/lib/types";
 import Image from "next/image";
 import Link from "next/link";
@@ -21,6 +22,9 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [similarLoadingId, setSimilarLoadingId] = useState<string | null>(null);
+  const [similarSeedId, setSimilarSeedId] = useState<string | null>(null);
+  const [similarLabel, setSimilarLabel] = useState<{ name: string; artist: string; id: string } | null>(null);
+  const discovery = useInfiniteSimilar(similarSeedId);
   const [listening, setListening] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [previewSongId, setPreviewSongId] = useState<string | null>(null);
@@ -36,6 +40,21 @@ export default function Home() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (discovery.phase === "ready" || discovery.phase === "error") {
+      setSimilarLoadingId(null);
+    }
+  }, [discovery.phase]);
+
+  useEffect(() => {
+    if (similarSeedId && discovery.error) {
+      setActionMessage(discovery.error);
+    }
+  }, [similarSeedId, discovery.error]);
+
+  const displaySongs = similarSeedId ? discovery.items : songs;
+  const similarMode = Boolean(similarSeedId);
 
   async function shareSong(song: Song) {
     if (typeof window === "undefined") return;
@@ -172,6 +191,8 @@ export default function Home() {
     event.preventDefault();
     setError(null);
     setActionMessage(null);
+    setSimilarSeedId(null);
+    setSimilarLabel(null);
     setLoading(true);
 
     try {
@@ -192,24 +213,13 @@ export default function Home() {
     }
   }
 
-  async function loadSimilarSongs(seedSong: Song) {
+  function loadSimilarSongs(seedSong: Song) {
     setError(null);
     setActionMessage(null);
     setSimilarLoadingId(seedSong.id);
     setPreviewSongId(null);
-
-    try {
-      const response = await fetch(`/api/songs/${encodeURIComponent(seedSong.id)}/similar`);
-      const data = (await response.json()) as { songs?: Song[]; error?: string };
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to load similar songs.");
-      }
-      setSongs(data.songs ?? []);
-    } catch (err) {
-      setActionMessage(err instanceof Error ? err.message : "Something went wrong.");
-    } finally {
-      setSimilarLoadingId(null);
-    }
+    setSimilarLabel({ id: seedSong.id, name: seedSong.name, artist: seedSong.artist });
+    setSimilarSeedId(seedSong.id);
   }
 
   function startVoiceInput() {
@@ -335,8 +345,49 @@ export default function Home() {
           {actionMessage ? <p className="mt-2 text-sm text-[#9f5c34]">{actionMessage}</p> : null}
         </section>
 
+        {similarLabel ? (
+          <div className="mt-6 rounded-2xl border border-[var(--foreground)]/10 bg-[var(--foreground)]/5 px-4 py-3 text-sm text-[var(--muted)]">
+            <span className="text-[var(--foreground)]">Similar discovery</span>
+            {" · "}
+            Based on{" "}
+            <Link
+              href={`/song/${similarLabel.id}`}
+              className="font-medium text-[#9f5c34] underline-offset-2 hover:underline"
+            >
+              {similarLabel.name}
+            </Link>
+            {" — "}
+            {similarLabel.artist}. Scroll down — more tracks load as you go.
+            {discovery.meta.total != null && discovery.meta.total > 0 ? (
+              <span className="mt-1 block text-xs opacity-90">
+                Showing {discovery.items.length} of ~{discovery.meta.total} matches.
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+
         <section className="mt-8 grid w-full min-w-0 gap-4 sm:grid-cols-2">
-          {songs.map((song) => (
+          {similarMode && discovery.isInitialLoading
+            ? Array.from({ length: 6 }, (_, i) => (
+                <div
+                  key={`sim-sk-${i}`}
+                  className="neu-panel w-full min-w-0 max-w-full animate-pulse p-4"
+                  aria-hidden
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="neu-inset h-[72px] w-[72px] rounded-xl" />
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="h-4 w-4/5 max-w-[90%] rounded bg-[var(--foreground)]/10" />
+                      <div className="h-3 w-3/5 max-w-[70%] rounded bg-[var(--foreground)]/10" />
+                      <div className="h-3 w-2/5 max-w-[50%] rounded bg-[var(--foreground)]/10" />
+                    </div>
+                  </div>
+                  <div className="mt-4 h-9 w-full rounded-xl bg-[var(--foreground)]/10" />
+                </div>
+              ))
+            : null}
+          {!discovery.isInitialLoading || !similarMode
+            ? displaySongs.map((song) => (
             <div key={song.id} className="neu-panel w-full min-w-0 max-w-full p-4 transition hover:translate-y-[-1px]">
               <div className="flex items-center gap-4">
                 {song.albumArt ? (
@@ -391,8 +442,44 @@ export default function Home() {
                 </button>
               </div>
             </div>
-          ))}
+              ))
+            : null}
         </section>
+
+        {similarMode && discovery.isLoadingMore ? (
+          <div className="mt-4 grid w-full min-w-0 gap-4 sm:grid-cols-2">
+            <div className="neu-panel animate-pulse p-4 [content-visibility:auto]" aria-hidden>
+              <div className="flex gap-4">
+                <div className="neu-inset h-[72px] w-[72px] rounded-xl" />
+                <div className="flex-1 space-y-2 pt-1">
+                  <div className="h-4 rounded bg-[var(--foreground)]/10" />
+                  <div className="h-3 w-2/3 rounded bg-[var(--foreground)]/10" />
+                </div>
+              </div>
+            </div>
+            <div className="neu-panel animate-pulse p-4 [content-visibility:auto]" aria-hidden>
+              <div className="flex gap-4">
+                <div className="neu-inset h-[72px] w-[72px] rounded-xl" />
+                <div className="flex-1 space-y-2 pt-1">
+                  <div className="h-4 rounded bg-[var(--foreground)]/10" />
+                  <div className="h-3 w-2/3 rounded bg-[var(--foreground)]/10" />
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {similarMode ? <div ref={discovery.sentinelRef} className="h-2 w-full shrink-0" aria-hidden /> : null}
+
+        {similarMode && !discovery.hasMore && discovery.items.length > 0 && discovery.phase === "ready" ? (
+          <p className="mt-6 text-center text-sm text-[var(--muted)]">
+            That&apos;s the full set for this seed — search again or pick another song to ride a new wave.
+          </p>
+        ) : null}
+
+        {similarMode && !discovery.isInitialLoading && discovery.items.length === 0 && discovery.phase === "ready" ? (
+          <p className="mt-4 text-center text-sm text-[var(--muted)]">No similar songs found. Try another track.</p>
+        ) : null}
       </div>
     </main>
   );

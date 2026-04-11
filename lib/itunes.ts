@@ -5,6 +5,7 @@ type ITunesTrack = {
   trackName: string;
   artistName: string;
   collectionName: string;
+  primaryGenreName?: string;
   artworkUrl100?: string;
   previewUrl?: string;
   trackViewUrl?: string;
@@ -87,6 +88,7 @@ function mapITunesTrack(track: ITunesTrack): Song {
     albumArt: track.artworkUrl100?.replace("100x100", "600x600") ?? null,
     previewUrl: track.previewUrl ?? null,
     externalUrl: track.trackViewUrl ?? null,
+    genre: track.primaryGenreName ?? null,
   };
 }
 
@@ -147,8 +149,12 @@ export async function iTunesLookupSong(songId: string) {
   return track ? mapITunesTrack(track) : null;
 }
 
-export async function iTunesSimilarSongs(seedSong: Song, limit = 10) {
-  const [byArtist, byTitle] = await Promise.all([
+/**
+ * Broad iTunes candidate pool (artist + title + optional genre). No per-artist cap — callers rank then diversify.
+ */
+export async function iTunesSimilarSongs(seedSong: Song, maxCandidates = 60) {
+  const genreTerm = seedSong.genre?.trim();
+  const [byArtist, byTitle, byGenre] = await Promise.all([
     fetch(
       `https://itunes.apple.com/search?term=${encodeURIComponent(seedSong.artist)}&entity=song&limit=35`,
       { next: { revalidate: 60 } },
@@ -157,12 +163,16 @@ export async function iTunesSimilarSongs(seedSong: Song, limit = 10) {
       `https://itunes.apple.com/search?term=${encodeURIComponent(seedSong.name)}&entity=song&limit=35`,
       { next: { revalidate: 60 } },
     ),
+    genreTerm
+      ? fetch(
+          `https://itunes.apple.com/search?term=${encodeURIComponent(genreTerm)}&entity=song&limit=35`,
+          { next: { revalidate: 60 } },
+        )
+      : Promise.resolve(null as Response | null),
   ]);
 
-  if (!byArtist.ok && !byTitle.ok) {
-    throw new Error(
-      `iTunes recommendations failed (${byArtist.status || byTitle.status}).`,
-    );
+  if (!byArtist.ok && !byTitle.ok && !(byGenre?.ok)) {
+    throw new Error(`iTunes recommendations failed (${byArtist.status || byTitle.status}).`);
   }
 
   const artistData = byArtist.ok
@@ -171,37 +181,19 @@ export async function iTunesSimilarSongs(seedSong: Song, limit = 10) {
   const titleData = byTitle.ok
     ? ((await byTitle.json()) as ITunesSearchResponse)
     : ({ results: [] } as ITunesSearchResponse);
+  const genreData =
+    byGenre && byGenre.ok ? ((await byGenre.json()) as ITunesSearchResponse) : ({ results: [] } as ITunesSearchResponse);
 
-  const candidates = [...artistData.results, ...titleData.results]
-    .map(mapITunesTrack)
-    .filter((song) => song.id !== seedSong.id);
-
-  // When Last.fm is unavailable (common in prod misconfig), avoid returning only same-artist tracks.
-  const perArtistCap = 2;
-  const perArtistCounts = new Map<string, number>();
-  const unique = new Map<string, Song>();
-  const diversified: Song[] = [];
-
-  for (const song of candidates) {
-    if (unique.has(song.id)) continue;
-    unique.set(song.id, song);
-
-    const key = song.artist.toLowerCase().trim();
-    const count = perArtistCounts.get(key) ?? 0;
-    if (count >= perArtistCap) continue;
-    perArtistCounts.set(key, count + 1);
-    diversified.push(song);
-    if (diversified.length >= limit) break;
+  const seen = new Set<number>();
+  const candidates: Song[] = [];
+  for (const track of [...artistData.results, ...titleData.results, ...genreData.results]) {
+    if (seen.has(track.trackId)) continue;
+    seen.add(track.trackId);
+    const song = mapITunesTrack(track);
+    if (song.id === seedSong.id) continue;
+    candidates.push(song);
+    if (candidates.length >= maxCandidates) break;
   }
 
-  if (diversified.length >= limit) return diversified.slice(0, limit);
-
-  // Fill remaining slots without the per-artist cap, still de-duped.
-  for (const song of candidates) {
-    if (diversified.length >= limit) break;
-    if (diversified.some((s) => s.id === song.id)) continue;
-    diversified.push(song);
-  }
-
-  return diversified.slice(0, limit);
+  return candidates;
 }

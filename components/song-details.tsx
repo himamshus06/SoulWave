@@ -1,39 +1,42 @@
 "use client";
 
+import { useInfiniteSimilar } from "@/hooks/use-infinite-similar";
 import { Song } from "@/lib/types";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+function SimilarSkeletonRow() {
+  return (
+    <div
+      className="neu-panel animate-pulse p-3 [contain-intrinsic-size:auto_3.25rem] [content-visibility:auto]"
+      aria-hidden
+    >
+      <div className="h-4 w-[75%] max-w-[14rem] rounded bg-[var(--foreground)]/10" />
+      <div className="mt-2 h-3 w-1/2 max-w-[10rem] rounded bg-[var(--foreground)]/10" />
+    </div>
+  );
+}
+
 export function SongDetails({ songId }: { songId: string }) {
   const [song, setSong] = useState<Song | null>(null);
-  const [similarSongs, setSimilarSongs] = useState<Song[]>([]);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
   const [musicAppMessage, setMusicAppMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const similar = useInfiniteSimilar(songId);
+
   useEffect(() => {
-    async function loadSongData() {
+    async function loadSong() {
       setLoading(true);
       setError(null);
       try {
-        const [songRes, similarRes] = await Promise.all([
-          fetch(`/api/songs/${songId}`),
-          fetch(`/api/songs/${songId}/similar`),
-        ]);
-
+        const songRes = await fetch(`/api/songs/${songId}`);
         const songData = (await songRes.json()) as { song?: Song; error?: string };
-        const similarData = (await similarRes.json()) as {
-          songs?: Song[];
-          error?: string;
-        };
 
         if (!songRes.ok) throw new Error(songData.error || "Failed to load song.");
-        if (!similarRes.ok) throw new Error(similarData.error || "Failed to load similar songs.");
-
         setSong(songData.song ?? null);
-        setSimilarSongs(similarData.songs ?? []);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Something went wrong.");
       } finally {
@@ -41,7 +44,7 @@ export function SongDetails({ songId }: { songId: string }) {
       }
     }
 
-    void loadSongData();
+    void loadSong();
   }, [songId]);
 
   async function shareSong() {
@@ -69,8 +72,6 @@ export function SongDetails({ songId }: { songId: string }) {
     const searchTerm = `${song.name} ${song.artist}`.trim();
     const encoded = encodeURIComponent(searchTerm);
     const attempts = [
-      // Use universal links so Safari treats URLs as valid and
-      // can hand off to installed apps when supported.
       { app: "Spotify", uri: `https://open.spotify.com/search/${encoded}` },
       { app: "Apple Music", uri: `https://music.apple.com/search?term=${encoded}` },
       { app: "YouTube Music", uri: `https://music.youtube.com/search?q=${encoded}` },
@@ -201,19 +202,50 @@ export function SongDetails({ songId }: { songId: string }) {
       </section>
 
       <section>
-        <h2 className="mb-3 text-xl font-semibold text-[var(--foreground)]">Similar songs</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {similarSongs.map((similarSong) => (
-            <Link
-              key={similarSong.id}
-              href={`/song/${similarSong.id}`}
-              className="neu-panel p-3"
-            >
-              <p className="font-medium text-[var(--foreground)]">{similarSong.name}</p>
-              <p className="text-sm text-[var(--muted)]">{similarSong.artist}</p>
-            </Link>
-          ))}
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+          <h2 className="text-xl font-semibold text-[var(--foreground)]">Similar songs</h2>
+          {similar.meta.total != null && similar.meta.total > 0 ? (
+            <p className="text-xs text-[var(--muted)]">{similar.items.length} of ~{similar.meta.total} in this wave</p>
+          ) : null}
         </div>
+        {similar.meta.lastFmError ? (
+          <p className="mb-2 text-xs text-[var(--muted)]">Last.fm: {similar.meta.lastFmError}</p>
+        ) : null}
+        {similar.error ? <p className="mb-2 text-sm text-[#a33f2f]">{similar.error}</p> : null}
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          {similar.isInitialLoading
+            ? Array.from({ length: 6 }, (_, i) => <SimilarSkeletonRow key={`sk-${i}`} />)
+            : similar.items.map((similarSong) => (
+                <Link
+                  key={similarSong.id}
+                  href={`/song/${similarSong.id}`}
+                  className="neu-panel p-3 transition hover:translate-y-[-1px] [contain-intrinsic-size:auto_3.25rem] [content-visibility:auto]"
+                >
+                  <p className="font-medium text-[var(--foreground)]">{similarSong.name}</p>
+                  <p className="text-sm text-[var(--muted)]">{similarSong.artist}</p>
+                </Link>
+              ))}
+        </div>
+
+        {similar.isLoadingMore ? (
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <SimilarSkeletonRow />
+            <SimilarSkeletonRow />
+          </div>
+        ) : null}
+
+        <div ref={similar.sentinelRef} className="h-px w-full" aria-hidden />
+
+        {!similar.hasMore && similar.items.length > 0 && similar.phase === "ready" ? (
+          <p className="mt-4 text-center text-sm text-[var(--muted)]">
+            You&apos;ve reached the end of this wave — search again or open another track to keep discovering.
+          </p>
+        ) : null}
+
+        {!similar.isInitialLoading && similar.items.length === 0 && similar.phase === "ready" ? (
+          <p className="text-sm text-[var(--muted)]">No similar songs found for this track.</p>
+        ) : null}
       </section>
     </div>
   );

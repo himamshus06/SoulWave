@@ -6,6 +6,8 @@ export type Song = {
   albumArt: string | null;
   previewUrl: string | null;
   externalUrl: string | null;
+  /** iTunes primaryGenreName when available */
+  genre?: string | null;
 };
 
 export type Playlist = {

@@ -25,7 +25,9 @@ function normalize(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
-export async function lastFmSimilarSongs(seed: Song, limit = 10) {
+export type LastFmEnrichedTrack = { song: Song; match: number };
+
+export async function lastFmSimilarSongs(seed: Song, limit = 10): Promise<LastFmEnrichedTrack[]> {
   const apiKey = getLastFmApiKey();
   const url = new URL("https://ws.audioscrobbler.com/2.0/");
   url.searchParams.set("method", "track.getsimilar");
@@ -43,31 +45,32 @@ export async function lastFmSimilarSongs(seed: Song, limit = 10) {
   const rawTracks = data.similartracks?.track;
   const candidates = Array.isArray(rawTracks) ? rawTracks : rawTracks ? [rawTracks] : [];
 
-  const enriched: Array<{ song: Song; match: number }> = [];
-  for (const item of candidates) {
-    const track = item.name?.trim();
-    const artist = item.artist?.name?.trim();
-    if (!track || !artist) continue;
+  const enriched = await Promise.all(
+    candidates.map(async (item): Promise<LastFmEnrichedTrack | null> => {
+      const track = item.name?.trim();
+      const artist = item.artist?.name?.trim();
+      if (!track || !artist) return null;
 
-    const mapped = await iTunesSearchSongs(`${track} ${artist}`, 2).catch(() => []);
-    const first = mapped[0];
-    if (!first) continue;
+      const mapped = await iTunesSearchSongs(`${track} ${artist}`, 2).catch(() => []);
+      const first = mapped[0];
+      if (!first) return null;
 
-    const score = Number(item.match ?? "0");
-    const sameTrack =
-      normalize(first.name) === normalize(seed.name) && normalize(first.artist) === normalize(seed.artist);
-    if (sameTrack) continue;
-    enriched.push({ song: first, match: Number.isFinite(score) ? score : 0 });
-  }
+      const score = Number(item.match ?? "0");
+      const sameTrack =
+        normalize(first.name) === normalize(seed.name) && normalize(first.artist) === normalize(seed.artist);
+      if (sameTrack) return null;
 
-  const deduped = new Map<string, { song: Song; match: number }>();
-  for (const item of enriched) {
+      return { song: first, match: Number.isFinite(score) ? score : 0 };
+    }),
+  );
+
+  const ok = enriched.filter((x): x is LastFmEnrichedTrack => x !== null);
+
+  const deduped = new Map<string, LastFmEnrichedTrack>();
+  for (const item of ok) {
     const existing = deduped.get(item.song.id);
     if (!existing || item.match > existing.match) deduped.set(item.song.id, item);
   }
 
-  return [...deduped.values()]
-    .sort((a, b) => b.match - a.match)
-    .slice(0, limit)
-    .map((item) => item.song);
+  return [...deduped.values()].sort((a, b) => b.match - a.match).slice(0, limit);
 }
